@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LiteMoze 6.0 - Global Edition</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        input[type="checkbox"] { accent-color: #10b981; width: 1.2rem; height: 1.2rem; cursor: pointer; }
+    </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex justify-center items-start p-4">
+
+    <div class="w-full max-w-md bg-slate-900 rounded-3xl shadow-2xl p-6 border border-slate-800 min-h-[90vh] flex flex-col justify-between relative">
+        
+        <div>
+            <div class="flex justify-between items-center mb-6">
+                <div>
+                    <div class="flex items-center gap-2">
+                        <h1 class="text-xl font-black tracking-tight text-emerald-400">⚡ LiteMoze 6.0</h1>
+                        <button onclick="toggleGlobalSettings(true)" class="text-slate-400 hover:text-emerald-400 transition cursor-pointer bg-slate-800 p-1.5 rounded-lg shadow-sm">
+                            ⚙️
+                        </button>
+                    </div>
+                    <p data-i18n="app_sub" class="text-[10px] text-slate-500 mt-0.5">專屬國際資產版</p>
+                </div>
+                <span id="sync-status" class="text-[10px] bg-amber-500/10 text-amber-400 px-2 py-1 rounded-full font-mono font-bold tracking-wider transition-all duration-300">Loading...</span>
+            </div>
+
+            <div class="bg-gradient-to-br from-slate-800 to-slate-850 p-6 rounded-2xl border border-slate-700/40 mb-6 shadow-inner relative overflow-hidden">
+                <div class="flex justify-between items-center mb-1 relative z-10">
+                    <p class="text-xs text-slate-400 font-medium tracking-wide"><span data-i18n="net_worth">總資產淨值估算</span> (<span id="display-base-currency" class="text-emerald-400/80">TWD</span>)</p>
+                    <button onclick="toggleSettingsModal(true)" class="text-slate-400 hover:text-emerald-400 text-xs transition flex items-center gap-1 cursor-pointer bg-slate-900/40 px-2 py-1 rounded-lg border border-slate-700/30">
+                        <span data-i18n="custom_board">⚙️ 自訂看板</span>
+                    </button>
+                </div>
+                <h2 id="total-assets" class="text-3xl font-black tracking-tight text-white font-mono relative z-10">TWD 0</h2>
+                
+                <div id="dashboard-rates" class="flex flex-col gap-1.5 mt-4 pt-4 border-t border-slate-700/50 text-[11px] text-slate-400 font-mono relative z-10">
+                    </div>
+                
+                <div id="screen-error-log" class="hidden bg-rose-950/50 border border-rose-500/50 text-rose-300 text-[10px] p-2 rounded-lg mt-3 font-mono whitespace-pre-wrap relative z-10"></div>
+            </div>
+
+            <div class="flex justify-between items-center mb-3 px-1">
+                <h3 data-i18n="my_assets" class="text-xs font-bold text-slate-400 tracking-wider uppercase">我的資產帳戶</h3>
+                <span id="account-count" class="text-[11px] text-slate-500 font-mono">0</span>
+            </div>
+            
+            <div id="asset-list" class="space-y-2.5 max-h-[35vh] overflow-y-auto pr-1 no-scrollbar">
+                </div>
+        </div>
+
+        <div class="mt-6 pt-2">
+            <button onclick="toggleModal(true)" data-i18n="add_record" class="w-full bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-extrabold py-3.5 px-4 rounded-xl transition duration-200 shadow-lg shadow-emerald-500/10 text-center text-sm cursor-pointer active:scale-[0.98]">
+                + 新增資產紀錄
+            </button>
+        </div>
+    </div>
+
+    <div id="global-settings-modal" class="hidden fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-[60]">
+        <div class="bg-slate-900 w-full max-w-sm rounded-2xl p-6 border border-slate-700 shadow-2xl">
+            <h3 data-i18n="global_set" class="text-base font-bold mb-5 text-white flex items-center gap-2">🌐 系統全域設定</h3>
+            
+            <div class="space-y-5">
+                <div>
+                    <label data-i18n="lang_sel" class="block text-xs font-bold text-slate-400 mb-2 uppercase tracking-wider">介面語言 (Language)</label>
+                    <select id="app-language" class="w-full bg-slate-950 border border-slate-700 rounded-lg p-3 text-slate-200 text-sm focus:outline-none focus:border-emerald-500">
+                        <option value="zh-TW">繁體中文 (Traditional Chinese)</option>
+                        <option value="zh-CN">简体中文 (Simplified Chinese)</option>
+                        <option value="en">English (英語)</option>
+                        <option value="es">Español (西班牙語)</option>
+                        <option value="fr">Français (法語)</option>
+                        <option value="hi">हिन्दी (印地語)</option>
+                        <option value="ar">العربية (阿拉伯語)</option>
+                        <option value="bn">বাংলা (孟加拉語)</option>
+                        <option value="pt">Português (葡萄牙語)</option>
+                        <option value="ru">Русский (俄語)</option>
+                        <option value="ur">اردو (烏爾都語)</option>
+                        <option value="id">Bahasa Indonesia (印尼語)</option>
+                        <option value="ms">Bahasa Melayu (馬來語)</option>
+                        <option value="de">Deutsch (德語)</option>
+                        <option value="ja">日本語 (日語)</option>
+                        <option value="ko">한국어 (韓語)</option>
+                        <option value="vi">Tiếng Việt (越南語)</option>
+                        <option value="tr">Türkçe (土耳其語)</option>
+                        <option value="ta">தமிழ் (坦米爾語)</option>
+                        <option value="te">తెలుగు (泰盧固語)</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label data-i18n="base_cur_sel" class="block text-xs font-bold text-slate-400 mb-2 uppercase tracking-wider">計價本位幣 (Base Currency)</label>
+                    <select id="app-base-currency" class="w-full bg-slate-950 border border-slate-700 rounded-lg p-3 text-slate-200 text-sm focus:outline-none focus:border-emerald-500 max-h-48">
+                        </select>
+                </div>
+            </div>
+            
+            <div class="flex space-x-3 mt-6">
+                <button onclick="toggleGlobalSettings(false)" data-i18n="cancel" class="flex-1 bg-slate-800 hover:bg-slate-700 text-slate-300 py-3 px-4 rounded-xl text-xs font-medium cursor-pointer">取消</button>
+                <button onclick="saveGlobalSettings()" data-i18n="save" class="flex-1 bg-emerald-500 hover:bg-emerald-600 text-slate-950 py-3 px-4 rounded-xl text-xs font-extrabold cursor-pointer">儲存設定</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="settings-modal" class="hidden fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+        <div class="bg-slate-900 w-full max-w-sm rounded-2xl p-6 border border-slate-800 shadow-2xl flex flex-col max-h-[85vh]">
+            <h3 data-i18n="custom_board" class="text-base font-bold mb-3 text-white flex items-center gap-2">⚙️ 自訂看板</h3>
+            <div class="mb-3 relative">
+                <input type="text" id="currency-search" onkeyup="handleSearch()" data-i18n-placeholder="search_ph" placeholder="🔍 搜尋代碼或名稱..." class="w-full bg-slate-950 border border-slate-700 rounded-xl p-3 text-slate-200 text-sm focus:outline-none focus:border-emerald-500 placeholder-slate-600">
+            </div>
+            <div id="settings-checkboxes" class="space-y-1 bg-slate-800/50 p-2 rounded-xl border border-slate-700/50 overflow-y-auto no-scrollbar flex-1">
+                </div>
+            <div class="flex space-x-3 mt-4 pt-2">
+                <button onclick="toggleSettingsModal(false)" data-i18n="cancel" class="flex-1 bg-slate-800 hover:bg-slate-700 text-slate-300 py-3 px-4 rounded-xl text-xs font-medium cursor-pointer">取消</button>
+                <button onclick="saveSettings()" data-i18n="save" class="flex-1 bg-emerald-500 hover:bg-emerald-600 text-slate-950 py-3 px-4 rounded-xl text-xs font-extrabold cursor-pointer">儲存設定</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="add-modal" class="hidden fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+        <div class="bg-slate-900 w-full max-w-sm rounded-2xl p-6 border border-slate-800 shadow-2xl">
+            <h3 id="modal-title" class="text-base font-bold mb-4 text-white flex items-center gap-2">🌍 <span data-i18n="add_title">新增資產項目</span></h3>
+            
+            <div class="space-y-4">
+                <div>
+                    <label data-i18n="lbl_asset_type" class="block text-xs font-medium text-slate-400 mb-1">選擇資產幣別</label>
+                    <select id="asset-symbol" class="w-full bg-slate-950 border border-slate-700 rounded-lg p-3 text-slate-200 text-sm focus:outline-none focus:border-emerald-500 max-h-48"></select>
+                </div>
+                <div>
+                    <label data-i18n="lbl_asset_name" class="block text-xs font-medium text-slate-400 mb-1">自訂名稱</label>
+                    <input id="asset-name" type="text" class="w-full bg-slate-950 border border-slate-700 rounded-lg p-3 text-slate-200 text-sm focus:outline-none focus:border-emerald-500">
+                </div>
+                <div>
+                    <label data-i18n="lbl_asset_amount" class="block text-xs font-medium text-slate-400 mb-1">持有總數量</label>
+                    <input id="asset-amount" type="number" step="any" class="w-full bg-slate-950 border border-slate-700 rounded-lg p-3 text-slate-200 text-sm focus:outline-none focus:border-emerald-500 font-mono">
+                </div>
+            </div>
+            
+            <div class="flex space-x-3 mt-6">
+                <button onclick="toggleModal(false)" data-i18n="cancel" class="flex-1 bg-slate-800 hover:bg-slate-700 text-slate-300 py-3 px-4 rounded-xl text-xs font-medium cursor-pointer">取消</button>
+                <button id="modal-submit-btn" onclick="saveAsset()" data-i18n="btn_confirm" class="flex-1 bg-emerald-500 hover:bg-emerald-600 text-slate-950 py-3 px-4 rounded-xl text-xs font-extrabold cursor-pointer">確認</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ==========================================
+        // 🌍 核心狀態與資料庫
+        // ==========================================
+        let assets = JSON.parse(localStorage.getItem('lite_moze_v6_assets')) || [];
+        let displayRates = JSON.parse(localStorage.getItem('lite_moze_v6_settings')) || ['USD', 'EUR', 'JPY', 'BTC', 'ETH'];
+        let appConfig = JSON.parse(localStorage.getItem('lite_moze_v6_config')) || { baseCurrency: 'TWD', language: 'zh-TW' };
+        
+        let editingAssetId = null;
+
+        // 【重構】：以 USD 為絕對中心 (1 USD = X Currency)
+        let ratesBaseUSD = { USD: 1 }; 
+
+        const currencyInfo = {
+            // == 主流法幣 ==
+            TWD: { name: '新台幣', icon: '🇹🇼', type: 'fiat' },
+            USD: { name: '美元', icon: '🇺🇸', type: 'fiat' },
+            EUR: { name: '歐元', icon: '🇪🇺', type: 'fiat' },
+            JPY: { name: '日圓', icon: '🇯🇵', type: 'fiat' },
+            GBP: { name: '英鎊', icon: '🇬🇧', type: 'fiat' },
+            AUD: { name: '澳幣', icon: '🇦🇺', type: 'fiat' },
+            CAD: { name: '加幣', icon: '🇨🇦', type: 'fiat' },
+            CHF: { name: '瑞士法郎', icon: '🇨🇭', type: 'fiat' },
+            CNY: { name: '人民幣', icon: '🇨🇳', type: 'fiat' },
+            HKD: { name: '港幣', icon: '🇭🇰', type: 'fiat' },
+            NZD: { name: '紐西蘭幣', icon: '🇳🇿', type: 'fiat' },
+            SGD: { name: '新加坡幣', icon: '🇸🇬', type: 'fiat' },
+            KRW: { name: '韓元', icon: '🇰🇷', type: 'fiat' },
+            MYR: { name: '馬來西亞令吉', icon: '🇲🇾', type: 'fiat' },
+            IDR: { name: '印尼盾', icon: '🇮🇩', type: 'fiat' },
+            INR: { name: '印度盧比', icon: '🇮🇳', type: 'fiat' },
+            THB: { name: '泰銖', icon: '🇹🇭', type: 'fiat' },
+            VND: { name: '越南盾', icon: '🇻🇳', type: 'fiat' },
+            PHP: { name: '菲律賓披索', icon: '🇵🇭', type: 'fiat' },
+            ZAR: { name: '南非蘭特', icon: '🇿🇦', type: 'fiat' },
+            BRL: { name: '巴西雷亞爾', icon: '🇧🇷', type: 'fiat' },
+            MXN: { name: '墨西哥披索', icon: '🇲🇽', type: 'fiat' },
+            RUB: { name: '俄羅斯盧布', icon: '🇷🇺', type: 'fiat' },
+            TRY: { name: '土耳其里拉', icon: '🇹🇷', type: 'fiat' },
+            AED: { name: '阿聯酋迪拉姆', icon: '🇦🇪', type: 'fiat' },
+            SAR: { name: '沙烏地里亞爾', icon: '🇸🇦', type: 'fiat' },
+            DKK: { name: '丹麥克朗', icon: '🇩🇰', type: 'fiat' },
+            NOK: { name: '挪威克朗', icon: '🇳🇴', type: 'fiat' },
+            SEK: { name: '瑞典克朗', icon: '🇸🇪', type: 'fiat' },
+            // == 加密貨幣 ==
+            BTC: { name: 'Bitcoin', icon: '🪙', type: 'crypto' },
+            ETH: { name: 'Ethereum', icon: '🪙', type: 'crypto' },
+            USDT: { name: 'Tether (USDT)', icon: '💵', type: 'crypto' },
+            BNB: { name: 'BNB', icon: '🪙', type: 'crypto' },
+            SOL: { name: 'Solana', icon: '🪙', type: 'crypto' },
+            XRP: { name: 'XRP', icon: '🪙', type: 'crypto' },
+            USDC: { name: 'USDC', icon: '💵', type: 'crypto' },
+            ADA: { name: 'Cardano', icon: '🪙', type: 'crypto' },
+            DOGE: { name: 'Dogecoin', icon: '🐕', type: 'crypto' },
+            SHIB: { name: 'Shiba Inu', icon: '🐕', type: 'crypto' }
+        };
+
+        // ==========================================
+        // 🌐 i18n 國際化翻譯字典 (Top 20 語言精簡版)
+        // ==========================================
+        const translations = {
+            'zh-TW': { app_sub: '專屬國際資產版', net_worth: '總資產淨值估算', my_assets: '我的資產帳戶', add_record: '+ 新增資產紀錄', global_set: '系統全域設定', lang_sel: '介面語言', base_cur_sel: '計價本位幣', cancel: '取消', save: '儲存設定', custom_board: '⚙️ 自訂看板', search_ph: '🔍 搜尋代碼...', add_title: '新增資產項目', edit_title: '編輯資產項目', lbl_asset_type: '選擇資產幣別', lbl_asset_name: '自訂名稱', lbl_asset_amount: '持有總數量', btn_confirm: '確認儲存', items: '個項目', del_conf: '確認刪除此項目？' },
+            'zh-CN': { app_sub: '专属国际资产版', net_worth: '总资产净值估算', my_assets: '我的资产账户', add_record: '+ 新增资产记录', global_set: '系统全局设置', lang_sel: '界面语言', base_cur_sel: '计价本位币', cancel: '取消', save: '保存设置', custom_board: '⚙️ 自定义看板', search_ph: '🔍 搜索代码...', add_title: '新增资产项目', edit_title: '编辑资产项目', lbl_asset_type: '选择资产币种', lbl_asset_name: '自定义名称', lbl_asset_amount: '持有总数量', btn_confirm: '确认保存', items: '个项目', del_conf: '确认删除此项目？' },
+            'en': { app_sub: 'Global Assets Edition', net_worth: 'Estimated Net Worth', my_assets: 'My Asset Accounts', add_record: '+ Add Asset Record', global_set: 'Global Settings', lang_sel: 'Language', base_cur_sel: 'Base Currency', cancel: 'Cancel', save: 'Save Settings', custom_board: '⚙️ Custom Board', search_ph: '🔍 Search symbol...', add_title: 'Add Asset', edit_title: 'Edit Asset', lbl_asset_type: 'Select Asset Type', lbl_asset_name: 'Custom Name', lbl_asset_amount: 'Total Amount', btn_confirm: 'Confirm', items: 'Items', del_conf: 'Delete this asset?' },
+            'es': { app_sub: 'Edición de Activos Globales', net_worth: 'Valor Neto Estimado', my_assets: 'Mis Cuentas de Activos', add_record: '+ Añadir Activo', global_set: 'Ajustes Globales', lang_sel: 'Idioma', base_cur_sel: 'Moneda Base', cancel: 'Cancelar', save: 'Guardar', custom_board: '⚙️ Panel', search_ph: '🔍 Buscar...', add_title: 'Añadir', edit_title: 'Editar', lbl_asset_type: 'Tipo', lbl_asset_name: 'Nombre', lbl_asset_amount: 'Cantidad', btn_confirm: 'Confirmar', items: 'Artículos', del_conf: '¿Eliminar?' },
+            'ms': { app_sub: 'Edisi Aset Global', net_worth: 'Anggaran Nilai Bersih', my_assets: 'Akaun Aset Saya', add_record: '+ Tambah Rekod Aset', global_set: 'Tetapan Global', lang_sel: 'Bahasa', base_cur_sel: 'Mata Wang Asas', cancel: 'Batal', save: 'Simpan', custom_board: '⚙️ Papan Tersuai', search_ph: '🔍 Cari...', add_title: 'Tambah Aset', edit_title: 'Edit Aset', lbl_asset_type: 'Jenis Aset', lbl_asset_name: 'Nama', lbl_asset_amount: 'Jumlah', btn_confirm: 'Sahkan', items: 'Item', del_conf: 'Padam aset ini?' },
+            // (為保持程式碼流暢度，其他語言將套用通用英文模板，實務上可擴充)
+        };
+
+        function getTranslation(key) {
+            const lang = appConfig.language;
+            if (translations[lang] && translations[lang][key]) return translations[lang][key];
+            if (translations['en'] && translations['en'][key]) return translations['en'][key];
+            return key;
+        }
+
+        function applyTranslations() {
+            document.querySelectorAll('[data-i18n]').forEach(el => {
+                const key = el.getAttribute('data-i18n');
+                if(el.tagName === 'INPUT' && el.type === 'button') el.value = getTranslation(key);
+                else el.innerText = getTranslation(key);
+            });
+            document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+                el.placeholder = getTranslation(el.getAttribute('data-i18n-placeholder'));
+            });
+            
+            // 特殊動態字串處理
+            document.getElementById('account-count').innerText = `${assets.length} ${getTranslation('items')}`;
+        }
+
+        // ==========================================
+        // 🧮 核心算法與格式化
+        // ==========================================
+        
+        // 將資產換算為當前「本位幣」的價值
+        function getAssetValueInBase(symbol, amount) {
+            if (!ratesBaseUSD[symbol] || !ratesBaseUSD[appConfig.baseCurrency]) return 0;
+            const valueInUSD = amount / ratesBaseUSD[symbol];
+            return valueInUSD * ratesBaseUSD[appConfig.baseCurrency];
+        }
+
+        // 格式化顯示 (法幣去小數點，加密貨幣保留)
+        function formatDisplayAmount(value, currencySym) {
+            const info = currencyInfo[currencySym];
+            if (!info) return value.toFixed(2);
+            if (info.type === 'crypto') {
+                return value < 1 ? value.toFixed(6) : value.toLocaleString(undefined, {maximumFractionDigits: 4});
+            }
+            const zeroDecimals = ['TWD', 'JPY', 'KRW', 'VND', 'IDR', 'CLP'];
+            if (zeroDecimals.includes(currencySym)) return Math.round(value).toLocaleString();
+            return value.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+        }
+
+        function logErrorToScreen(msg) {
+            const errDiv = document.getElementById('screen-error-log');
+            if (errDiv) { errDiv.innerText = "⚠️ " + msg; errDiv.classList.remove('hidden'); }
+        }
+
+        // ==========================================
+        // 🔄 UI 渲染與初始化
+        // ==========================================
+        function initSelectors() {
+            const assetSelect = document.getElementById('asset-symbol');
+            const baseSelect = document.getElementById('app-base-currency');
+            if(!assetSelect || !baseSelect) return;
+            assetSelect.innerHTML = ''; baseSelect.innerHTML = '';
+            
+            const fiatGroupAsset = document.createElement('optgroup'); fiatGroupAsset.label = '🌍 Fiat Currencies';
+            const cryptoGroupAsset = document.createElement('optgroup'); cryptoGroupAsset.label = '🪙 Cryptocurrencies';
+            
+            const fiatGroupBase = document.createElement('optgroup'); fiatGroupBase.label = '🌍 Fiat Currencies';
+            const cryptoGroupBase = document.createElement('optgroup'); cryptoGroupBase.label = '🪙 Cryptocurrencies';
+
+            for (const [symbol, info] of Object.entries(currencyInfo)) {
+                const optText = `${info.icon} ${symbol} - ${info.name}`;
+                const opt1 = new Option(optText, symbol);
+                const opt2 = new Option(optText, symbol);
+                
+                if (info.type === 'crypto') {
+                    cryptoGroupAsset.appendChild(opt1); cryptoGroupBase.appendChild(opt2);
+                } else {
+                    fiatGroupAsset.appendChild(opt1); fiatGroupBase.appendChild(opt2);
+                }
+            }
+            assetSelect.append(fiatGroupAsset, cryptoGroupAsset);
+            baseSelect.append(fiatGroupBase, cryptoGroupBase);
+
+            document.getElementById('app-language').value = appConfig.language;
+            document.getElementById('app-base-currency').value = appConfig.baseCurrency;
+        }
+
+        function toggleModal(show, editId = null) { 
+            document.getElementById('add-modal').classList.toggle('hidden', !show); 
+            if (!show) return;
+
+            editingAssetId = editId;
+            const titleSpan = document.querySelector('#modal-title span');
+            const btn = document.getElementById('modal-submit-btn');
+
+            if (editId) {
+                titleSpan.innerText = getTranslation('edit_title');
+                const target = assets.find(a => a.id === editId);
+                if (target) {
+                    document.getElementById('asset-symbol').value = target.symbol;
+                    document.getElementById('asset-name').value = target.name;
+                    document.getElementById('asset-amount').value = target.amount;
+                }
+            } else {
+                titleSpan.innerText = getTranslation('add_title');
+                document.getElementById('asset-symbol').selectedIndex = 0;
+                document.getElementById('asset-name').value = '';
+                document.getElementById('asset-amount').value = '';
+            }
+        }
+
+        function toggleGlobalSettings(show) {
+            document.getElementById('global-settings-modal').classList.toggle('hidden', !show);
+            if(show) {
+                document.getElementById('app-language').value = appConfig.language;
+                document.getElementById('app-base-currency').value = appConfig.baseCurrency;
+            }
+        }
+
+        function saveGlobalSettings() {
+            appConfig.language = document.getElementById('app-language').value;
+            appConfig.baseCurrency = document.getElementById('app-base-currency').value;
+            localStorage.setItem('lite_moze_v6_config', JSON.stringify(appConfig));
+            
+            document.getElementById('display-base-currency').innerText = appConfig.baseCurrency;
+            applyTranslations();
+            renderDashboardRates();
+            renderAssets();
+            toggleGlobalSettings(false);
+        }
+
+        function toggleSettingsModal(show) { 
+            document.getElementById('settings-modal').classList.toggle('hidden', !show); 
+            if(show) { document.getElementById('currency-search').value = ''; renderSettingsCheckboxes(); }
+        }
+
+        function handleSearch() {
+            renderSettingsCheckboxes(document.getElementById('currency-search').value.toLowerCase().trim());
+        }
+
+        function renderSettingsCheckboxes(filterText = '') {
+            const container = document.getElementById('settings-checkboxes');
+            let html = '';
+            for (const [symbol, info] of Object.entries(currencyInfo)) {
+                if (filterText && !symbol.toLowerCase().includes(filterText) && !info.name.includes(filterText)) continue;
+                const isChecked = displayRates.includes(symbol) ? 'checked' : '';
+                html += `
+                    <label class="flex items-center justify-between p-2 hover:bg-slate-700/60 rounded-xl cursor-pointer">
+                        <div class="flex items-center gap-3">
+                            <span>${info.icon}</span><span class="text-sm font-bold text-slate-200">${symbol}</span>
+                        </div>
+                        <input type="checkbox" value="${symbol}" class="rate-checkbox" ${isChecked}>
+                    </label>`;
+            }
+            container.innerHTML = html;
+        }
+
+        function saveSettings() {
+            displayRates = Array.from(document.querySelectorAll('.rate-checkbox:checked')).map(cb => cb.value);
+            localStorage.setItem('lite_moze_v6_settings', JSON.stringify(displayRates));
+            toggleSettingsModal(false);
+            renderDashboardRates();
+        }
+
+        // ==========================================
+        // 📡 API 核心同步 (穩定抗鎖架構)
+        // ==========================================
+        async function fetchMarketData() {
+            let statusPill = document.getElementById('sync-status');
+            let fOK = false, cOK = false;
+
+            try {
+                const res = await fetch('https://open.er-api.com/v6/latest/USD');
+                if (res.ok) {
+                    const data = await res.json();
+                    for (const sym in currencyInfo) {
+                        if (currencyInfo[sym].type === 'fiat' && data.rates[sym]) {
+                            ratesBaseUSD[sym] = data.rates[sym]; // 1 USD = X Fiat
+                        }
+                    }
+                    fOK = true;
+                }
+            } catch (e) {}
+
+            try {
+                const res = await fetch('https://api.binance.com/api/v3/ticker/price');
+                if (res.ok) {
+                    const data = await res.json();
+                    const tMap = {}; data.forEach(t => tMap[t.symbol] = parseFloat(t.price));
+                    
+                    for (const sym in currencyInfo) {
+                        if (currencyInfo[sym].type === 'crypto' && tMap[sym+'USDT']) {
+                            // 若 1 BTC = 65000 USDT，則 1 USD = (1/65000) BTC
+                            ratesBaseUSD[sym] = 1 / tMap[sym+'USDT'];
+                        }
+                    }
+                    ratesBaseUSD['USDT'] = 1; ratesBaseUSD['USDC'] = 1;
+                    cOK = true;
+                }
+            } catch (e) {}
+
+            if (statusPill) {
+                if (fOK && cOK) { statusPill.innerText = "LIVE (15s)"; statusPill.className = "text-[10px] bg-emerald-500/10 text-emerald-400 px-2 py-1 rounded-full animate-pulse"; }
+                else { statusPill.innerText = "Offline"; statusPill.className = "text-[10px] bg-rose-500/10 text-rose-400 px-2 py-1 rounded-full"; }
+            }
+
+            renderDashboardRates();
+            renderAssets();
+        }
+
+        function renderDashboardRates() {
+            const container = document.getElementById('dashboard-rates');
+            if (!container) return;
+            container.innerHTML = '';
+            const base = appConfig.baseCurrency;
+            
+            displayRates.forEach(symbol => {
+                if (!currencyInfo[symbol] || symbol === base) return;
+                
+                // 計算 1 Display = X Base
+                let displayRateValue = 0;
+                if (ratesBaseUSD[base] && ratesBaseUSD[symbol]) {
+                    // (1 USD / rates[Symbol]) * rates[Base]
+                    displayRateValue = (1 / ratesBaseUSD[symbol]) * ratesBaseUSD[base];
+                }
+                
+                const valStr = displayRateValue > 1000 ? Math.round(displayRateValue).toLocaleString() : displayRateValue.toFixed(4);
+                
+                container.innerHTML += `
+                    <div class="flex justify-between items-center group py-0.5">
+                        <span class="group-hover:text-slate-300 transition flex items-center gap-1.5">
+                            <span class="text-sm">${currencyInfo[symbol].icon}</span> 
+                            <span>${symbol}/${base}:</span>
+                        </span>
+                        <span class="text-emerald-400 font-bold font-mono">${valStr}</span>
+                    </div>`;
+            });
+        }
+
+        // ==========================================
+        // 📝 資產 CRUD
+        // ==========================================
+        function saveAsset() {
+            const symbol = document.getElementById('asset-symbol').value;
+            const amount = parseFloat(document.getElementById('asset-amount').value) || 0;
+            let name = document.getElementById('asset-name').value.trim() || currencyInfo[symbol].name;
+
+            if (editingAssetId) {
+                const idx = assets.findIndex(a => a.id === editingAssetId);
+                if (idx !== -1) { assets[idx].symbol = symbol; assets[idx].name = name; assets[idx].amount = amount; }
+            } else {
+                assets.push({ id: Date.now().toString(), symbol, name, amount });
+            }
+            
+            localStorage.setItem('lite_moze_v6_assets', JSON.stringify(assets));
+            toggleModal(false); renderAssets();
+        }
+
+        function deleteAsset(id) {
+            if(confirm(getTranslation('del_conf'))) {
+                assets = assets.filter(a => a.id !== id);
+                localStorage.setItem('lite_moze_v6_assets', JSON.stringify(assets));
+                renderAssets();
+            }
+        }
+
+        function renderAssets() {
+            const list = document.getElementById('asset-list');
+            if (!list) return;
+            list.innerHTML = '';
+            let totalBaseValue = 0;
+            const base = appConfig.baseCurrency;
+
+            document.getElementById('account-count').innerText = `${assets.length} ${getTranslation('items')}`;
+            document.getElementById('display-base-currency').innerText = base;
+
+            assets.forEach(asset => {
+                const valInBase = getAssetValueInBase(asset.symbol, asset.amount);
+                totalBaseValue += valInBase;
+                
+                const info = currencyInfo[asset.symbol] || { icon: '🌍', type: 'fiat' };
+                const formattedAmt = formatDisplayAmount(asset.amount, asset.symbol);
+                const formattedBaseVal = formatDisplayAmount(valInBase, base);
+                
+                let subtext = asset.symbol === base ? `Base Asset` : `${formattedAmt} ${asset.symbol} ≈ ${base} ${formattedBaseVal}`;
+
+                list.innerHTML += `
+                    <div class="bg-slate-800/50 border border-slate-800/80 p-4 rounded-xl flex justify-between items-center hover:border-slate-700/60 transition">
+                        <div class="flex items-center gap-3">
+                            <div class="text-2xl">${info.icon}</div>
+                            <div>
+                                <div class="text-sm font-bold text-slate-100">${asset.name}</div>
+                                <div class="text-[11px] text-slate-400 mt-0.5 font-mono">${subtext}</div>
+                            </div>
+                        </div>
+                        <div class="text-right flex items-center gap-2">
+                            <span class="text-sm font-mono font-bold text-emerald-400 mr-1">${base} ${formattedBaseVal}</span>
+                            <button onclick="toggleModal(true, '${asset.id}')" class="text-slate-500 hover:text-amber-400 p-1 text-xs transition cursor-pointer">✏️</button>
+                            <button onclick="deleteAsset('${asset.id}')" class="text-slate-500 hover:text-rose-400 p-1 text-xs transition cursor-pointer">✕</button>
+                        </div>
+                    </div>`;
+            });
+            document.getElementById('total-assets').innerText = `${base} ${formatDisplayAmount(totalBaseValue, base)}`;
+        }
+
+        // ==========================================
+        // 🚀 啟動鏈
+        // ==========================================
+        initSelectors();
+        applyTranslations();
+        fetchMarketData();
+        setInterval(fetchMarketData, 15000); 
+    </script>
+</body>
+</html>
