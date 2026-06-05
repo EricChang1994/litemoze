@@ -1,0 +1,823 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IgniteFi 6.0 - Global Edition</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        input[type="checkbox"] { accent-color: #10b981; width: 1.2rem; height: 1.2rem; cursor: pointer; }
+    </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex justify-center items-start p-4">
+
+    <div class="w-full max-w-md bg-slate-900 rounded-3xl shadow-2xl p-6 border border-slate-800 min-h-[90vh] flex flex-col justify-between relative overflow-hidden">
+        
+        <div>
+            <div class="flex justify-between items-center mb-6">
+                <div>
+                    <div class="flex items-center gap-2">
+                        <h1 class="text-xl font-black tracking-tight text-emerald-400">⚡ IgniteFi 6.0</h1>
+                        <button onclick="toggleGlobalSettings(true)" class="text-slate-400 hover:text-emerald-400 transition cursor-pointer bg-slate-800 p-1.5 rounded-lg shadow-sm">⚙️</button>
+                    </div>
+                    <p data-i18n="app_sub" class="text-[10px] text-slate-500 mt-0.5">專屬國際資產版</p>
+                </div>
+                <span id="sync-status" class="text-[10px] bg-amber-500/10 text-amber-400 px-2 py-1 rounded-full font-mono font-bold tracking-wider transition-all duration-300">Loading...</span>
+            </div>
+
+            <div class="bg-gradient-to-br from-slate-800 to-slate-850 p-6 rounded-2xl border border-slate-700/40 mb-6 shadow-inner relative">
+                <div class="flex justify-between items-center mb-1 relative z-10">
+                    <p class="text-xs text-slate-400 font-medium tracking-wide"><span data-i18n="net_worth">總資產淨值估算</span> (<span id="display-base-currency" class="text-emerald-400/80">TWD</span>)</p>
+                    <div class="flex gap-1.5">
+                        <button onclick="toggleCategoryModal(true)" class="text-slate-400 hover:text-emerald-400 text-[11px] transition flex items-center gap-1 cursor-pointer bg-slate-900/40 px-2 py-1 rounded-lg border border-slate-700/30">
+                            <span data-i18n="manage_cat">🏷️ 類別管理</span>
+                        </button>
+                        <button onclick="toggleSettingsModal(true)" class="text-slate-400 hover:text-emerald-400 text-[11px] transition flex items-center gap-1 cursor-pointer bg-slate-900/40 px-2 py-1 rounded-lg border border-slate-700/30">
+                            <span data-i18n="custom_board">⚙️ 自訂看板</span>
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="relative z-10">
+                    <h2 id="total-assets" class="text-3xl font-black tracking-tight text-white font-mono mt-1">TWD 0</h2>
+                    <div id="chart-date-label" class="text-[10px] text-slate-400 font-mono h-3 mt-0.5 tracking-wide"></div>
+                </div>
+                
+                <div class="flex gap-4 text-[11px] font-mono mt-2 relative z-10">
+                    <div class="flex items-center gap-1"><span class="text-slate-500" data-i18n="sum_assets">總資產</span> <span id="sum-assets" class="text-emerald-400/90 font-bold">0</span></div>
+                    <div class="flex items-center gap-1"><span class="text-slate-500" data-i18n="sum_liabilities">總負債</span> <span id="sum-liabilities" class="text-rose-400/90 font-bold">0</span></div>
+                </div>
+                
+                <div id="trend-chart-container" class="w-full h-[72px] mt-4 mb-2 relative z-10 opacity-90 cursor-crosshair touch-none select-none">
+                    <svg id="trend-svg" class="w-full h-full drop-shadow-md overflow-visible" preserveAspectRatio="none" viewBox="0 0 100 40">
+                        <defs>
+                            <linearGradient id="chart-gradient" x1="0" x2="0" y1="0" y2="1">
+                                <stop offset="0%" stop-color="#10b981" stop-opacity="0.35"/>
+                                <stop offset="100%" stop-color="#10b981" stop-opacity="0"/>
+                            </linearGradient>
+                        </defs>
+                        <path id="trend-area" d="" fill="url(#chart-gradient)"/>
+                        <path id="trend-line" d="" fill="none" stroke="#10b981" stroke-width="1.5" vector-effect="non-scaling-stroke" stroke-linejoin="round" stroke-linecap="round"/>
+                        
+                        <g id="crosshair" class="hidden">
+                            <line id="crosshair-line" x1="0" y1="0" x2="0" y2="40" stroke="#94a3b8" stroke-width="0.8" stroke-dasharray="2 2" vector-effect="non-scaling-stroke"/>
+                            <circle id="crosshair-dot" cx="0" cy="0" r="2" fill="#10b981" stroke="#020617" stroke-width="1" vector-effect="non-scaling-stroke"/>
+                        </g>
+                    </svg>
+
+                    <div id="chart-high-label" class="absolute hidden text-[11px] text-white font-mono bg-slate-800 px-2 py-1 rounded border border-slate-600 pointer-events-none transition-all duration-300 z-40 shadow-lg whitespace-nowrap font-bold"></div>
+                    <div id="chart-low-label" class="absolute hidden text-[11px] text-slate-300 font-mono bg-slate-800/90 px-2 py-1 rounded border border-slate-700 pointer-events-none transition-all duration-300 z-40 shadow-lg whitespace-nowrap"></div>
+                </div>
+
+                <div class="flex justify-between items-center px-1 mb-2 mt-1 relative z-10 text-[10px] font-bold text-slate-400">
+                    <button onclick="setChartRange('1D')" id="btn-range-1D" class="range-btn py-1 px-3 rounded-md hover:text-slate-200 transition bg-slate-800 text-slate-100">1天</button>
+                    <button onclick="setChartRange('7D')" id="btn-range-7D" class="range-btn py-1 px-3 rounded-md hover:text-slate-200 transition">7天</button>
+                    <button onclick="setChartRange('30D')" id="btn-range-30D" class="range-btn py-1 px-3 rounded-md hover:text-slate-200 transition">30天</button>
+                    <button onclick="setChartRange('180D')" id="btn-range-180D" class="range-btn py-1 px-3 rounded-md hover:text-slate-200 transition">180天</button>
+                    <button onclick="setChartRange('360D')" id="btn-range-360D" class="range-btn py-1 px-3 rounded-md hover:text-slate-200 transition">360天</button>
+                </div>
+
+                <div class="mt-2 pt-3 border-t border-slate-700/50 relative z-10">
+                    <div onclick="toggleRates()" class="flex justify-between items-center cursor-pointer text-xs text-slate-400 font-medium group px-1">
+                        <span class="group-hover:text-emerald-400 transition flex items-center gap-1" data-i18n="live_rates">💱 即時匯率參考</span>
+                        <span id="rate-toggle-icon" class="text-[10px] transition-transform duration-300 text-slate-500">▼</span>
+                    </div>
+                    <div id="dashboard-rates" class="flex flex-col gap-1.5 text-[11px] text-slate-400 font-mono overflow-hidden transition-all duration-300 max-h-0 opacity-0 mt-0 px-1"></div>
+                </div>
+                
+                <div class="flex gap-2 mt-4 pt-3 border-t border-slate-700/30 relative z-10">
+                    <button onclick="openAnalysisModal('group')" class="flex-1 bg-slate-950/60 hover:bg-slate-950 text-slate-300 hover:text-emerald-400 text-xs py-2 px-3 rounded-xl border border-slate-800/60 transition flex items-center justify-center gap-1.5 cursor-pointer font-medium active:scale-95">
+                        <span data-i18n="btn_group_stat">📊 分組統計</span>
+                    </button>
+                    <button onclick="openAnalysisModal('currency')" class="flex-1 bg-slate-950/60 hover:bg-slate-950 text-slate-300 hover:text-emerald-400 text-xs py-2 px-3 rounded-xl border border-slate-800/60 transition flex items-center justify-center gap-1.5 cursor-pointer font-medium active:scale-95">
+                        <span data-i18n="btn_cur_stat">🪙 幣種統計</span>
+                    </button>
+                </div>
+            </div>
+
+            <div class="flex justify-between items-center mb-3 px-1">
+                <h3 data-i18n="my_assets" class="text-xs font-bold text-slate-400 tracking-wider uppercase">我的資產與負債</h3>
+                <span id="account-count" class="text-[11px] text-slate-500 font-mono">0</span>
+            </div>
+            
+            <div id="asset-list" class="space-y-0.5 max-h-[30vh] overflow-y-auto pr-1 no-scrollbar pb-4"></div>
+        </div>
+
+        <div class="mt-4 pt-2">
+            <button onclick="toggleModal(true)" data-i18n="add_record" class="w-full bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-extrabold py-3.5 px-4 rounded-xl transition duration-200 shadow-lg shadow-emerald-500/10 text-center text-sm cursor-pointer active:scale-[0.98]">
+                + 新增紀錄
+            </button>
+        </div>
+    </div>
+
+    <div id="global-settings-modal" class="hidden fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-[60]">
+        <div class="bg-slate-900 w-full max-w-sm rounded-2xl p-6 border border-slate-700 shadow-2xl">
+            <h3 data-i18n="global_set" class="text-base font-bold mb-5 text-white flex items-center gap-2">🌐 系統全域設定</h3>
+            <div class="space-y-5">
+                <div>
+                    <label data-i18n="lang_sel" class="block text-xs font-bold text-slate-400 mb-2 uppercase tracking-wider">介面語言 (Language)</label>
+                    <select id="app-language" class="w-full bg-slate-950 border border-slate-700 rounded-lg p-3 text-slate-200 text-sm focus:outline-none focus:border-emerald-500">
+                        <option value="zh-TW">繁體中文 (Traditional Chinese)</option>
+                        <option value="zh-CN">简体中文 (Simplified Chinese)</option>
+                        <option value="en">English (英語)</option>
+                    </select>
+                </div>
+                <div class="relative">
+                    <label data-i18n="base_cur_sel" class="block text-xs font-bold text-slate-400 mb-2 uppercase tracking-wider">計價本位幣 (Base Currency)</label>
+                    <input type="text" id="base-currency-search" data-i18n-placeholder="ph_search_base" placeholder="🔍 搜尋幣種代碼或名稱..." class="w-full bg-slate-950 border border-slate-700 rounded-lg p-3 text-slate-200 text-sm focus:outline-none focus:border-emerald-500" onclick="toggleBaseList(true)" onkeyup="filterBaseCurrencies()">
+                    <div id="base-currency-list" class="absolute z-50 w-full max-h-48 overflow-y-auto bg-slate-900 border border-slate-700 rounded-lg mt-1 hidden shadow-xl no-scrollbar"></div>
+                    <input type="hidden" id="selected-base-currency" value="TWD">
+                </div>
+            </div>
+            <div class="flex space-x-3 mt-6">
+                <button onclick="toggleGlobalSettings(false)" data-i18n="cancel" class="flex-1 bg-slate-800 hover:bg-slate-700 text-slate-300 py-3 px-4 rounded-xl text-xs font-medium cursor-pointer">取消</button>
+                <button onclick="saveGlobalSettings()" data-i18n="save" class="flex-1 bg-emerald-500 hover:bg-emerald-600 text-slate-950 py-3 px-4 rounded-xl text-xs font-extrabold cursor-pointer">儲存設定</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="settings-modal" class="hidden fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+        <div class="bg-slate-900 w-full max-w-sm rounded-2xl p-6 border border-slate-800 shadow-2xl flex flex-col max-h-[85vh]">
+            <h3 data-i18n="custom_board" class="text-base font-bold mb-3 text-white flex items-center gap-2">⚙️ 自訂看板</h3>
+            <div class="mb-3 relative">
+                <input type="text" id="currency-search" onkeyup="handleSearch()" data-i18n-placeholder="ph_search_board" placeholder="🔍 搜尋代碼 or 名稱..." class="w-full bg-slate-950 border border-slate-700 rounded-xl p-3 text-slate-200 text-sm focus:outline-none focus:border-emerald-500 placeholder-slate-600">
+            </div>
+            <div id="settings-checkboxes" class="space-y-1 bg-slate-800/50 p-2 rounded-xl border border-slate-700/50 overflow-y-auto no-scrollbar flex-1"></div>
+            <div class="flex space-x-3 mt-4 pt-2">
+                <button onclick="toggleSettingsModal(false)" data-i18n="cancel" class="flex-1 bg-slate-800 hover:bg-slate-700 text-slate-300 py-3 px-4 rounded-xl text-xs font-medium cursor-pointer">取消</button>
+                <button onclick="saveSettings()" data-i18n="save" class="flex-1 bg-emerald-500 hover:bg-emerald-600 text-slate-950 py-3 px-4 rounded-xl text-xs font-extrabold cursor-pointer">儲存設定</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="category-modal" class="hidden fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+        <div class="bg-slate-900 w-full max-w-sm rounded-2xl p-6 border border-slate-800 shadow-2xl flex flex-col max-h-[75vh]">
+            <h3 data-i18n="manage_cat" class="text-base font-bold mb-3 text-white flex items-center gap-2">🏷️ 自訂資產類別管理</h3>
+            <div class="flex gap-2 mb-4">
+                <input type="text" id="new-category-input" data-i18n-placeholder="ph_new_cat" placeholder="輸入新類別名稱..." class="flex-1 bg-slate-950 border border-slate-700 rounded-xl p-2.5 text-slate-200 text-sm focus:outline-none focus:border-emerald-500">
+                <button onclick="addCustomCategory()" class="bg-emerald-500 hover:bg-emerald-600 text-slate-950 text-xs font-black px-4 rounded-xl cursor-pointer">+ 新增</button>
+            </div>
+            <div id="category-manager-list" class="space-y-2 overflow-y-auto no-scrollbar flex-1 bg-slate-850 p-2 rounded-xl border border-slate-800"></div>
+            <button onclick="toggleCategoryModal(false)" data-i18n="btn_confirm" class="w-full bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs py-3 rounded-xl mt-4 cursor-pointer font-bold">完成</button>
+        </div>
+    </div>
+
+    <div id="add-modal" class="hidden fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+        <div class="bg-slate-900 w-full max-w-sm rounded-2xl p-6 border border-slate-800 shadow-2xl">
+            <h3 id="modal-title" class="text-base font-bold mb-4 text-white flex items-center gap-2">🌍 <span data-i18n="add_title">新增紀錄</span></h3>
+            
+            <div class="space-y-4">
+                <div>
+                    <label data-i18n="lbl_record_type" class="block text-xs font-medium text-slate-400 mb-1">記錄類型</label>
+                    <div class="flex gap-2">
+                        <button type="button" id="btn-type-asset" onclick="setRecordType('asset')" class="flex-1 py-2.5 rounded-xl text-xs font-bold transition border cursor-pointer bg-emerald-500 text-slate-950 border-emerald-500">💰 資產</button>
+                        <button type="button" id="btn-type-liability" onclick="setRecordType('liability')" class="flex-1 py-2.5 rounded-xl text-xs font-bold transition border cursor-pointer bg-slate-950 text-slate-400 border-slate-800 hover:bg-slate-800">💳 負債</button>
+                    </div>
+                    <input type="hidden" id="record-type" value="asset">
+                </div>
+
+                <div>
+                    <label data-i18n="lbl_asset_type" class="block text-xs font-medium text-slate-400 mb-1">選擇幣別</label>
+                    <div class="relative">
+                        <input type="text" id="asset-symbol-search" onkeyup="filterAssetSymbols()" data-i18n-placeholder="ph_search_asset" placeholder="🔍 搜尋代碼 (如: BTC)..." class="w-full bg-slate-800 border border-slate-700 rounded-lg p-2 text-slate-200 text-sm focus:outline-none focus:border-emerald-500 placeholder-slate-500" onclick="toggleAssetSearchList(true)">
+                        <div id="asset-symbol-list" class="absolute z-50 w-full max-h-48 overflow-y-auto bg-slate-900 border border-slate-700 rounded-lg mt-1 hidden shadow-xl no-scrollbar"></div>
+                        <input type="hidden" id="asset-symbol" value="">
+                    </div>
+                </div>
+                
+                <div>
+                    <div class="flex justify-between items-end mb-1">
+                        <label data-i18n="lbl_asset_cat" class="block text-xs font-medium text-slate-400">類別 / 分組</label>
+                        <button type="button" onclick="quickAddCategory()" class="text-[10px] text-emerald-400 hover:text-emerald-300 bg-emerald-900/30 px-2 py-1 rounded cursor-pointer border border-emerald-800/50 transition-colors active:scale-95">+ 新增類別</button>
+                    </div>
+                    <select id="asset-category" class="w-full bg-slate-950 border border-slate-700 rounded-lg p-3 text-slate-200 text-sm focus:outline-none focus:border-emerald-500"></select>
+                </div>
+
+                <div>
+                    <label data-i18n="lbl_asset_name" class="block text-xs font-medium text-slate-400 mb-1">自訂名稱</label>
+                    <input id="asset-name" type="text" class="w-full bg-slate-950 border border-slate-700 rounded-lg p-3 text-slate-200 text-sm focus:outline-none focus:border-emerald-500">
+                </div>
+                <div>
+                    <label data-i18n="lbl_asset_amount" class="block text-xs font-medium text-slate-400 mb-1">數量 (正數)</label>
+                    <input id="asset-amount" type="number" step="any" min="0" class="w-full bg-slate-950 border border-slate-700 rounded-lg p-3 text-slate-200 text-sm focus:outline-none focus:border-emerald-500 font-mono">
+                </div>
+            </div>
+            
+            <div class="flex space-x-3 mt-6">
+                <button onclick="toggleModal(false)" data-i18n="cancel" class="flex-1 bg-slate-800 hover:bg-slate-700 text-slate-300 py-3 px-4 rounded-xl text-xs font-medium cursor-pointer">取消</button>
+                <button id="modal-submit-btn" onclick="saveAsset()" data-i18n="btn_confirm" class="flex-1 bg-emerald-500 hover:bg-emerald-600 text-slate-950 py-3 px-4 rounded-xl text-xs font-extrabold cursor-pointer">確認</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="analysis-modal" class="hidden fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-[70]">
+        <div class="bg-slate-900 w-full max-w-sm rounded-3xl p-6 border border-slate-800 shadow-2xl flex flex-col max-h-[85vh]">
+            <div class="flex justify-between items-center mb-2">
+                <h3 id="analysis-modal-title" class="text-base font-bold text-white flex items-center gap-2">📊 統計分析</h3>
+                <button onclick="toggleAnalysisModal(false)" class="text-slate-400 hover:text-rose-400 font-bold transition p-2 text-sm cursor-pointer bg-slate-800/50 rounded-lg">✕</button>
+            </div>
+            
+            <div class="flex gap-2 mb-2 mt-1">
+                <button id="btn-analysis-asset" onclick="switchAnalysisMode('asset')" class="flex-1 py-2 rounded-xl text-xs font-bold transition border cursor-pointer bg-emerald-500/20 text-emerald-400 border-emerald-500/50">💰 資產比例</button>
+                <button id="btn-analysis-liability" onclick="switchAnalysisMode('liability')" class="flex-1 py-2 rounded-xl text-xs font-bold transition border cursor-pointer bg-slate-800 text-slate-400 border-slate-700 hover:bg-slate-700">💳 負債比例</button>
+            </div>
+
+            <div class="flex justify-center items-center my-4 relative">
+                <svg id="analysis-svg" viewBox="0 0 100 100" class="w-44 h-44 drop-shadow-lg"></svg>
+                <div class="absolute flex flex-col items-center justify-center text-center pointer-events-none">
+                    <span id="analysis-center-title" class="text-[9px] text-slate-500 uppercase font-black tracking-widest">TOTAL</span>
+                    <span id="analysis-center-value" class="text-sm font-black text-white font-mono mt-0.5 truncate max-w-[120px]">0</span>
+                </div>
+            </div>
+            <div id="analysis-list" class="space-y-2 overflow-y-auto no-scrollbar flex-1 pr-0.5 pb-2"></div>
+        </div>
+    </div>
+
+    <div id="quick-add-category-modal" class="hidden fixed inset-0 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4 z-[80] opacity-100 transition-opacity">
+        <div class="bg-slate-900 w-full max-w-xs rounded-2xl p-5 border border-slate-700 shadow-2xl transform transition-all scale-100">
+            <h3 class="text-sm font-bold mb-4 text-white flex items-center gap-2">
+                <span class="bg-emerald-500/20 text-emerald-400 p-1.5 rounded-lg">✨</span> 新增自訂類別
+            </h3>
+            <input type="text" id="quick-category-input" data-i18n-placeholder="ph_new_cat" placeholder="輸入新類別名稱..." class="w-full bg-slate-950 border border-slate-700 rounded-xl p-3 text-slate-200 text-sm focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all mb-5 placeholder-slate-600">
+            <div class="flex space-x-3">
+                <button onclick="toggleQuickAddCategoryModal(false)" data-i18n="cancel" class="flex-1 bg-slate-800 hover:bg-slate-700 text-slate-300 py-2.5 px-4 rounded-xl text-xs font-medium cursor-pointer transition active:scale-95">取消</button>
+                <button onclick="confirmQuickAddCategory()" class="flex-1 bg-emerald-500 hover:bg-emerald-600 text-slate-950 py-2.5 px-4 rounded-xl text-xs font-extrabold cursor-pointer transition shadow-lg shadow-emerald-500/20 active:scale-95">確認</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ==========================================
+        // 🌍 核心狀態與 IgniteFi 資料庫
+        // ==========================================
+        let assets = JSON.parse(localStorage.getItem('ignite_fi_v6_assets')) || [];
+        let displayRates = JSON.parse(localStorage.getItem('ignite_fi_v6_settings')) || ['USD', 'EUR', 'JPY', 'BTC', 'ETH'];
+        let appConfig = JSON.parse(localStorage.getItem('ignite_fi_v6_config')) || { baseCurrency: 'TWD', language: 'zh-TW' };
+        
+        let defaultCategories = ['cat_cash', 'cat_bank', 'cat_invest', 'cat_crypto', 'cat_loan', 'cat_card', 'cat_other'];
+        let customCategories = JSON.parse(localStorage.getItem('ignite_fi_v6_categories')) || defaultCategories;
+        
+        // 歷史資料庫 (Time-Series Database)
+        let netWorthHistory = JSON.parse(localStorage.getItem('ignite_fi_v6_history')) || [];
+        
+        let currentEditAssetId = null; 
+        let ratesBaseUSD = { USD: 1 }; 
+        let collapsedGroups = {}; 
+        let isRatesExpanded = false; 
+
+        // 趨勢圖核心狀態
+        let currentNetWorth = 0;
+        let chartDataPoints = [];
+        let activeChartRange = '1D'; 
+
+        const currencyInfo = {
+            TWD: { icon: '🇹🇼', type: 'fiat' }, USD: { icon: '🇺🇸', type: 'fiat' },
+            EUR: { icon: '🇪🇺', type: 'fiat' }, JPY: { icon: '🇯🇵', type: 'fiat' },
+            HKD: { icon: '🇭🇰', type: 'fiat' }, GBP: { icon: '🇬🇧', type: 'fiat' },
+            AUD: { icon: '🇦🇺', type: 'fiat' }, CAD: { icon: '🇨🇦', type: 'fiat' },
+            SGD: { icon: '🇸🇬', type: 'fiat' }, CHF: { icon: '🇨🇭', type: 'fiat' },
+            CNY: { icon: '🇨🇳', type: 'fiat' }, KRW: { icon: '🇰🇷', type: 'fiat' },
+            MYR: { icon: '🇲🇾', type: 'fiat' }, NZD: { icon: '🇳🇿', type: 'fiat' },
+            THB: { icon: '🇹🇭', type: 'fiat' }, PHP: { icon: '🇵🇭', type: 'fiat' },
+            IDR: { icon: '🇮🇩', type: 'fiat' }, VND: { icon: '🇻🇳', type: 'fiat' },
+            INR: { icon: '🇮🇳', type: 'fiat' }, DKK: { icon: '🇩🇰', type: 'fiat' },
+            BTC: { icon: '🪙', type: 'crypto' }, ETH: { icon: '🪙', type: 'crypto' },
+            USDT: { icon: '💵', type: 'crypto' }, BNB: { icon: '🪙', type: 'crypto' },
+            SOL: { icon: '🪙', type: 'crypto' }, XRP: { icon: '🪙', type: 'crypto' },
+            USDC: { icon: '💵', type: 'crypto' }, ADA: { icon: '🪙', type: 'crypto' },
+            DOGE: { icon: '🐕', type: 'crypto' }, SHIB: { icon: '🐕', type: 'crypto' }
+        };
+
+        const i18n = {
+            'zh-TW': {
+                app_sub: '專屬國際資產版', net_worth: '總資產淨值估算', custom_board: '⚙️ 自訂看板',
+                my_assets: '我的資產帳戶', add_record: '+ 新增紀錄', global_set: '🌐 系統全域設定',
+                lang_sel: '介面語言', base_cur_sel: '計價本位幣', cancel: '取消', save: '儲存設定',
+                add_title: '新增紀錄', edit_title: '編輯紀錄', btn_confirm: '確認',
+                lbl_record_type: '記錄類型', lbl_asset_type: '選擇幣別', lbl_asset_name: '自訂名稱 (選填)', lbl_asset_amount: '數量 (正數)',
+                items: '個項目', del_conf: '確認刪除此項目？', not_found: '找不到相符的幣種', base_asset: '基準本位',
+                status_syncing: '同步中...', status_live: 'LIVE 同步 (15s)', status_offline: '離線模式',
+                group_fiat: '🌍 法定貨幣', group_crypto: '🪙 加密貨幣',
+                ph_search_base: '🔍 搜尋幣種代碼或名稱...', ph_search_board: '🔍 搜尋代碼 or 名稱...', 
+                ph_search_asset: '🔍 搜尋代碼 (如: BTC, USD)...', ph_name: '如: 銀行帳戶, 交易所, 信用卡', ph_amount: '輸入數量',
+                cur_TWD: '新台幣', cur_USD: '美元', cur_EUR: '歐元', cur_JPY: '日圓', cur_HKD: '港幣', cur_GBP: '英鎊', cur_AUD: '澳幣', cur_CAD: '加幣', cur_SGD: '新加坡元', cur_CHF: '瑞士法郎', cur_CNY: '人民幣', cur_KRW: '韓圓', cur_MYR: '馬來西亞令吉', cur_NZD: '紐西蘭元', cur_THB: '泰銖', cur_PHP: '菲律賓披索', cur_IDR: '印尼盾', cur_VND: '越南盾', cur_INR: '印度盧比', cur_DKK: '丹麥克朗',
+                cur_BTC: '比特幣', cur_ETH: '以太幣', cur_USDT: '泰達幣 (USDT)', cur_BNB: '幣安幣 (BNB)', cur_SOL: '索拉納 (SOL)', cur_XRP: '瑞波幣 (XRP)', cur_USDC: 'USD Coin', cur_ADA: '艾達幣 (ADA)', cur_DOGE: '狗狗幣', cur_SHIB: '柴犬幣',
+                btn_group_stat: '📊 分組統計', btn_cur_stat: '🪙 幣種統計',
+                chart_group_title: '📊 分組比例統計', chart_cur_title: '🪙 幣種分佈統計',
+                lbl_asset_cat: '類別 / 分組', no_chart_data: '尚無資料可供分析',
+                manage_cat: '🏷️ 類別管理', ph_new_cat: '輸入新類別名稱...', unclassified: '未分類',
+                sum_assets: '總資產', sum_liabilities: '總負債', type_asset: '資產項目', type_liability: '負債項目',
+                cat_cash: '現金', cat_bank: '銀行存款', cat_invest: '證券投資', cat_crypto: '加密貨幣', cat_loan: '貸款', cat_card: '信用卡', cat_other: '其他',
+                live_rates: '💱 即時匯率參考'
+            }
+        };
+
+        function getTranslation(key) {
+            if (!key) return '';
+            const lang = appConfig.language || 'zh-TW';
+            const dict = i18n[lang] || i18n['zh-TW'];
+            return dict[key] !== undefined ? dict[key] : key;
+        }
+
+        function getCurrencyName(symbol) { return getTranslation('cur_' + symbol) || symbol; }
+
+        function applyTranslations() {
+            document.querySelectorAll('[data-i18n]').forEach(el => {
+                const key = el.getAttribute('data-i18n');
+                el.innerText = getTranslation(key);
+            });
+            document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+                const key = el.getAttribute('data-i18n-placeholder');
+                el.placeholder = getTranslation(key);
+            });
+            document.getElementById('asset-name').placeholder = getTranslation('ph_name');
+            document.getElementById('asset-amount').placeholder = getTranslation('ph_amount');
+            document.getElementById('app-language').value = appConfig.language;
+            document.getElementById('account-count').innerText = `${assets.length} ${getTranslation('items')}`;
+        }
+
+        function getAssetValueInBase(symbol, amount) {
+            if (!ratesBaseUSD[symbol] || !ratesBaseUSD[appConfig.baseCurrency]) return 0;
+            const valueInUSD = amount / ratesBaseUSD[symbol];
+            return valueInUSD * ratesBaseUSD[appConfig.baseCurrency];
+        }
+
+        function formatDisplayAmount(value, currencySym) {
+            const info = currencyInfo[currencySym];
+            if (!info) return value.toFixed(2);
+            if (info.type === 'crypto') { return value < 1 ? value.toFixed(6) : value.toLocaleString(undefined, {maximumFractionDigits: 4}); }
+            const zeroDecimals = ['TWD', 'JPY', 'KRW', 'VND', 'IDR', 'CLP'];
+            if (zeroDecimals.includes(currencySym)) return Math.round(value).toLocaleString();
+            return value.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+        }
+
+        function toggleRates() {
+            isRatesExpanded = !isRatesExpanded;
+            const ratesDiv = document.getElementById('dashboard-rates');
+            const icon = document.getElementById('rate-toggle-icon');
+            if (isRatesExpanded) {
+                ratesDiv.classList.remove('max-h-0', 'opacity-0', 'mt-0'); ratesDiv.classList.add('max-h-48', 'opacity-100', 'mt-2'); icon.style.transform = 'rotate(180deg)';
+            } else {
+                ratesDiv.classList.add('max-h-0', 'opacity-0', 'mt-0'); ratesDiv.classList.remove('max-h-48', 'opacity-100', 'mt-2'); icon.style.transform = 'rotate(0deg)';
+            }
+        }
+
+        // ==========================================
+        // 🌟 真實歷史資料庫管理 (自動快照)
+        // ==========================================
+        function recordNetWorthHistory(netWorth) {
+            if (netWorth <= 0) return; 
+            const now = Date.now();
+            const lastRecord = netWorthHistory[netWorthHistory.length - 1];
+            
+            // 5 分鐘內防爆量覆寫
+            if (lastRecord && (now - lastRecord.time < 300000)) { 
+                lastRecord.value = netWorth; lastRecord.time = now; 
+            } else {
+                netWorthHistory.push({ time: now, value: netWorth });
+            }
+
+            if (netWorthHistory.length > 8760) netWorthHistory = netWorthHistory.slice(-8760);
+            localStorage.setItem('ignite_fi_v6_history', JSON.stringify(netWorthHistory));
+        }
+
+        // ==========================================
+        // 🌟 折線圖：時間節點取樣
+        // ==========================================
+        function setChartRange(range) {
+            activeChartRange = range;
+            document.querySelectorAll('.range-btn').forEach(btn => btn.classList.remove('bg-slate-800', 'text-slate-100'));
+            document.getElementById(`btn-range-${range}`).classList.add('bg-slate-800', 'text-slate-100');
+            
+            const now = Date.now();
+            let count = 24; let stepMs = 3600000; 
+
+            if (range === '1D') { count = 24; stepMs = 3600000; }        
+            else if (range === '7D') { count = 7; stepMs = 86400000; }    
+            else if (range === '30D') { count = 30; stepMs = 86400000; }  
+            else if (range === '180D') { count = 180; stepMs = 86400000; }
+            else if (range === '360D') { count = 360; stepMs = 86400000; }
+
+            let generatedData = [];
+            for (let i = count - 1; i >= 0; i--) {
+                const targetTime = now - i * stepMs;
+                let val = currentNetWorth; 
+
+                if (netWorthHistory.length > 0) {
+                    let found = false;
+                    for (let j = netWorthHistory.length - 1; j >= 0; j--) {
+                        if (netWorthHistory[j].time <= targetTime) { val = netWorthHistory[j].value; found = true; break; }
+                    }
+                    if (!found) val = netWorthHistory[0].value;
+                }
+                generatedData.push({ time: targetTime, value: val });
+            }
+            
+            chartDataPoints = generatedData;
+            drawTrendChart();
+        }
+
+        // ==========================================
+        // 🌟 折線圖：繪圖與標籤
+        // ==========================================
+        function drawTrendChart() {
+            const area = document.getElementById('trend-area');
+            const line = document.getElementById('trend-line');
+            const highLabel = document.getElementById('chart-high-label');
+            const lowLabel = document.getElementById('chart-low-label');
+            
+            if(!chartDataPoints || chartDataPoints.length === 0) {
+                area.setAttribute('d', ''); line.setAttribute('d', ''); 
+                highLabel.classList.add('hidden'); lowLabel.classList.add('hidden');
+                return;
+            }
+
+            const minVal = Math.min(...chartDataPoints.map(d=>d.value));
+            const maxVal = Math.max(...chartDataPoints.map(d=>d.value));
+            const isFlat = (maxVal === minVal); 
+            const rangeY = (maxVal - minVal) || 1; 
+            
+            const minTime = chartDataPoints[0].time;
+            const maxTime = chartDataPoints[chartDataPoints.length - 1].time;
+            const timeRange = (maxTime - minTime) || 1;
+
+            let dPath = `M 0,40 `; let lPath = ``;
+            let maxPt = chartDataPoints[0]; let minPt = chartDataPoints[0];
+
+            chartDataPoints.forEach((d, i) => {
+                const x = ((d.time - minTime) / timeRange) * 100;
+                const y = isFlat ? 20 : 38 - ((d.value - minVal) / rangeY) * 36;
+                
+                if (i === 0) { dPath += `L ${x},${y} `; lPath += `M ${x},${y} `; } 
+                else {
+                    const prevX = chartDataPoints[i-1].x; const prevY = chartDataPoints[i-1].y;
+                    const cpX = prevX + (x - prevX) / 2;
+                    dPath += `C ${cpX},${prevY} ${cpX},${y} ${x},${y} `; lPath += `C ${cpX},${prevY} ${cpX},${y} ${x},${y} `;
+                }
+                d.x = x; d.y = y; 
+                if (d.value > maxPt.value) maxPt = d; if (d.value < minPt.value) minPt = d;
+            });
+
+            dPath += `L 100,40 Z`; area.setAttribute('d', dPath); line.setAttribute('d', lPath);
+            
+            const base = appConfig.baseCurrency || 'TWD';
+            
+            if (isFlat) {
+                highLabel.innerText = `${base} ${formatDisplayAmount(maxPt.value, base)}`;
+                highLabel.style.left = `50%`; highLabel.style.top = `50%`;
+                highLabel.style.transform = `translate(-50%, -150%)`; 
+                highLabel.classList.remove('hidden');
+                lowLabel.classList.add('hidden'); 
+            } else {
+                highLabel.innerText = `${base} ${formatDisplayAmount(maxPt.value, base)}`;
+                highLabel.style.left = `${maxPt.x}%`; highLabel.style.top = `${(maxPt.y / 40) * 100}%`;
+                const highTy = maxPt.y < 10 ? '15px' : '-130%'; 
+                const highTx = maxPt.x < 15 ? '0%' : (maxPt.x > 85 ? '-100%' : '-50%');
+                highLabel.style.transform = `translate(${highTx}, ${highTy})`; highLabel.classList.remove('hidden');
+
+                lowLabel.innerText = `${base} ${formatDisplayAmount(minPt.value, base)}`;
+                lowLabel.style.left = `${minPt.x}%`; lowLabel.style.top = `${(minPt.y / 40) * 100}%`;
+                const lowTy = minPt.y > 30 ? '-130%' : '15px'; 
+                const lowTx = minPt.x < 15 ? '0%' : (minPt.x > 85 ? '-100%' : '-50%');
+                lowLabel.style.transform = `translate(${lowTx}, ${lowTy})`; lowLabel.classList.remove('hidden');
+            }
+        }
+
+        function setupChartInteraction() {
+            const container = document.getElementById('trend-chart-container');
+            const crosshair = document.getElementById('crosshair'); const crossLine = document.getElementById('crosshair-line'); const crossDot = document.getElementById('crosshair-dot');
+            const topTitle = document.getElementById('total-assets'); const dateLabel = document.getElementById('chart-date-label');
+            
+            function onMove(e) {
+                if(!chartDataPoints.length) return;
+                let clientX = (e.touches && e.touches.length > 0) ? e.touches[0].clientX : e.clientX;
+                const rect = container.getBoundingClientRect();
+                let xPercent = ((clientX - rect.left) / rect.width) * 100; xPercent = Math.max(0, Math.min(100, xPercent));
+
+                let closestIdx = 0; let minDiff = 100;
+                chartDataPoints.forEach((d, i) => { const diff = Math.abs(d.x - xPercent); if(diff < minDiff) { minDiff = diff; closestIdx = i; } });
+
+                const pt = chartDataPoints[closestIdx];
+                crosshair.classList.remove('hidden');
+                crossLine.setAttribute('x1', pt.x); crossLine.setAttribute('x2', pt.x); crossDot.setAttribute('cx', pt.x); crossDot.setAttribute('cy', pt.y);
+
+                const base = appConfig.baseCurrency || 'TWD';
+                topTitle.innerText = `${base} ${formatDisplayAmount(pt.value, base)}`; topTitle.classList.add('text-emerald-300'); 
+                
+                const d = new Date(pt.time);
+                dateLabel.innerText = `${d.getFullYear()}/${(d.getMonth()+1).toString().padStart(2,'0')}/${d.getDate().toString().padStart(2,'0')} ${d.getHours().toString().padStart(2,'0')}:${d.getMinutes().toString().padStart(2,'0')}`;
+            }
+
+            function onEnd() {
+                crosshair.classList.add('hidden'); const base = appConfig.baseCurrency || 'TWD';
+                topTitle.innerText = `${base} ${formatDisplayAmount(currentNetWorth, base)}`; topTitle.classList.remove('text-emerald-300'); dateLabel.innerText = ''; 
+            }
+
+            container.addEventListener('mousemove', onMove); container.addEventListener('touchmove', onMove, {passive: false});
+            container.addEventListener('mouseleave', onEnd); container.addEventListener('touchend', onEnd);
+        }
+
+        // ==========================================
+        // 🌟 表單 Modal 邏輯 (含防呆)
+        // ==========================================
+        function setRecordType(type) {
+            document.getElementById('record-type').value = type;
+            const btnAsset = document.getElementById('btn-type-asset'); const btnLiab = document.getElementById('btn-type-liability');
+            if(type === 'asset') {
+                btnAsset.className = "flex-1 py-2.5 rounded-xl text-xs font-bold transition border cursor-pointer bg-emerald-500 text-slate-950 border-emerald-500";
+                btnLiab.className = "flex-1 py-2.5 rounded-xl text-xs font-bold transition border cursor-pointer bg-slate-950 text-slate-400 border-slate-800 hover:bg-slate-800";
+            } else {
+                btnLiab.className = "flex-1 py-2.5 rounded-xl text-xs font-bold transition border cursor-pointer bg-rose-500 text-white border-rose-500";
+                btnAsset.className = "flex-1 py-2.5 rounded-xl text-xs font-bold transition border cursor-pointer bg-slate-950 text-slate-400 border-slate-800 hover:bg-slate-800";
+            }
+        }
+
+        function toggleModal(show, assetId = null) {
+            const modal = document.getElementById('add-modal'); const titleEl = document.querySelector('#modal-title span'); modal.classList.toggle('hidden', !show);
+            if(show) {
+                renderCategoryOptions(); currentEditAssetId = assetId;
+                if(assetId) {
+                    titleEl.innerText = getTranslation('edit_title'); const asset = assets.find(a => a.id === assetId);
+                    if(asset) {
+                        setRecordType(asset.recordType || 'asset'); selectAssetSymbol(asset.symbol);
+                        document.getElementById('asset-name').value = asset.name; document.getElementById('asset-amount').value = asset.amount;
+                        document.getElementById('asset-category').value = asset.category || customCategories[0] || '';
+                    }
+                } else {
+                    titleEl.innerText = getTranslation('add_title'); setRecordType('asset');
+                    document.getElementById('asset-symbol-search').value = ''; document.getElementById('asset-symbol').value = ''; document.getElementById('asset-name').value = ''; document.getElementById('asset-amount').value = '';
+                    if(customCategories.length > 0) document.getElementById('asset-category').value = customCategories[0]; filterAssetSymbols();
+                }
+            }
+        }
+
+        function saveAsset() {
+            const symbol = document.getElementById('asset-symbol').value; 
+            const name = document.getElementById('asset-name').value.trim();
+            const amount = parseFloat(document.getElementById('asset-amount').value); 
+            const category = document.getElementById('asset-category').value; 
+            const recordType = document.getElementById('record-type').value;
+
+            // ⚠️ 防呆警告獨立處理
+            if(!symbol) { alert("⚠️ 請從下拉選單中點擊選擇「幣別」！"); return; }
+            if(isNaN(amount) || amount < 0) { alert("⚠️ 金額需為大於等於 0 的數字，若為負債請由上方的「記錄類型」選擇！"); return; }
+
+            if(currentEditAssetId) {
+                const asset = assets.find(a => a.id === currentEditAssetId);
+                if(asset) { asset.symbol = symbol; asset.name = name; asset.amount = amount; asset.category = category; asset.recordType = recordType; }
+            } else { assets.push({ id: Date.now().toString(), symbol, name, amount, category, recordType }); }
+            
+            localStorage.setItem('ignite_fi_v6_assets', JSON.stringify(assets)); toggleModal(false); renderAssets();
+        }
+
+        function deleteAsset(id) {
+            if(confirm(getTranslation('del_conf'))) { assets = assets.filter(a => a.id !== id); localStorage.setItem('ignite_fi_v6_assets', JSON.stringify(assets)); renderAssets(); }
+        }
+
+        // ==========================================
+        // 🌟 列表渲染與淨值計算
+        // ==========================================
+        function renderAssets() {
+            const list = document.getElementById('asset-list'); if(!list) return; list.innerHTML = '';
+            const base = appConfig.baseCurrency || 'TWD';
+            document.getElementById('display-base-currency').innerText = base;
+            document.getElementById('account-count').innerText = `${assets.length} ${getTranslation('items')}`;
+
+            let totalAssets = 0; let totalLiabilities = 0;
+            const groupedAssets = {}; const groupedLiabilities = {};
+
+            assets.forEach(item => {
+                const rType = item.recordType || 'asset'; const cat = item.category || 'unclassified';
+                const valueInBase = getAssetValueInBase(item.symbol, item.amount);
+                if (rType === 'asset') {
+                    if (!groupedAssets[cat]) groupedAssets[cat] = []; groupedAssets[cat].push(item); totalAssets += valueInBase;
+                } else {
+                    if (!groupedLiabilities[cat]) groupedLiabilities[cat] = []; groupedLiabilities[cat].push(item); totalLiabilities += valueInBase;
+                }
+            });
+
+            currentNetWorth = totalAssets - totalLiabilities;
+            document.getElementById('total-assets').innerText = `${base} ${formatDisplayAmount(currentNetWorth, base)}`;
+            document.getElementById('sum-assets').innerText = formatDisplayAmount(totalAssets, base);
+            document.getElementById('sum-liabilities').innerText = formatDisplayAmount(totalLiabilities, base);
+            
+            recordNetWorthHistory(currentNetWorth);
+            setChartRange(activeChartRange);
+
+            function renderGroups(groups, rType) {
+                for (const catKey in groups) {
+                    const groupItems = groups[catKey]; let groupTotalBase = 0;
+                    groupItems.forEach(a => groupTotalBase += getAssetValueInBase(a.symbol, a.amount));
+
+                    const catName = getTranslation(catKey); const collapseKey = rType + '_' + catKey; 
+                    const isCollapsed = collapsedGroups[collapseKey]; const toggleIcon = isCollapsed ? '＋' : '－';
+                    const colorClass = rType === 'asset' ? 'text-emerald-400' : 'text-rose-400'; const sign = rType === 'asset' ? '+' : '−';
+
+                    const headerDiv = document.createElement('div');
+                    headerDiv.className = "flex justify-between items-center bg-slate-900/60 px-2 py-3 mt-1.5 cursor-pointer border-b border-slate-800 text-slate-300 font-bold hover:text-slate-100 transition";
+                    headerDiv.onclick = () => { collapsedGroups[collapseKey] = !isCollapsed; renderAssets(); };
+                    headerDiv.innerHTML = `
+                        <div class="flex items-center gap-2">
+                            <span class="w-4 text-center font-mono font-black text-slate-500">${toggleIcon}</span>
+                            <span class="text-[13px] tracking-wide">${catName} <span class="text-[10px] text-slate-500 font-normal ml-1">(${groupItems.length})</span></span>
+                        </div>
+                        <span class="text-[13px] font-mono ${colorClass}">${sign}${base} ${formatDisplayAmount(groupTotalBase, base)}</span>
+                    `;
+                    list.appendChild(headerDiv);
+
+                    if (!isCollapsed) {
+                        const itemsContainer = document.createElement('div'); itemsContainer.className = "pl-2 border-l border-slate-800/50 ml-4 mb-2";
+                        groupItems.forEach(asset => {
+                            const info = currencyInfo[asset.symbol] || { icon: '🪙', type: 'fiat' };
+                            const valueInBase = getAssetValueInBase(asset.symbol, asset.amount);
+                            const displayName = asset.name ? asset.name : getCurrencyName(asset.symbol);
+                            const formattedAmount = formatDisplayAmount(asset.amount, asset.symbol);
+                            const formattedBaseVal = formatDisplayAmount(valueInBase, base);
+
+                            let subtext = `${formattedAmount} ${asset.symbol}`;
+                            if (asset.symbol !== base) subtext += ` ≈ ${base} ${formattedBaseVal}`; else subtext = `${getTranslation('base_asset')}`;
+
+                            const div = document.createElement('div'); div.className = "p-3 flex justify-between items-center hover:bg-slate-800/40 rounded-xl transition mt-1 group";
+                            div.innerHTML = `
+                                <div class="flex items-center gap-3">
+                                    <div class="text-xl bg-slate-800/80 w-10 h-10 flex items-center justify-center rounded-full border border-slate-700/50">${info.icon}</div>
+                                    <div>
+                                        <div class="text-[13px] font-bold text-slate-200">${displayName}</div>
+                                        <div class="text-[10px] text-slate-500 font-mono mt-0.5">${subtext}</div>
+                                    </div>
+                                </div>
+                                <div class="text-right flex items-center gap-2">
+                                    <span class="text-sm font-mono font-bold ${colorClass} mr-1">${sign}${base} ${formattedBaseVal}</span>
+                                    <div class="opacity-0 group-hover:opacity-100 flex gap-1 transition">
+                                        <button onclick="event.stopPropagation(); toggleModal(true, '${asset.id}')" class="text-slate-500 hover:text-amber-400 p-1 text-xs cursor-pointer">✏️</button>
+                                        <button onclick="event.stopPropagation(); deleteAsset('${asset.id}')" class="text-slate-500 hover:text-rose-400 p-1 text-xs cursor-pointer">✕</button>
+                                    </div>
+                                </div>
+                            `;
+                            itemsContainer.appendChild(div);
+                        });
+                        list.appendChild(itemsContainer);
+                    }
+                }
+            }
+            if(Object.keys(groupedAssets).length > 0) renderGroups(groupedAssets, 'asset');
+            if(Object.keys(groupedLiabilities).length > 0) {
+                const sep = document.createElement('div'); sep.className = "mt-6 mb-1 text-[10px] font-black text-rose-500/70 uppercase tracking-widest px-2 flex items-center gap-2";
+                sep.innerHTML = `<span class="bg-rose-500/20 px-2 py-0.5 rounded">${getTranslation('type_liability')}</span> <div class="flex-1 h-px bg-rose-500/20"></div>`;
+                list.appendChild(sep); renderGroups(groupedLiabilities, 'liability');
+            }
+        }
+
+        // ==========================================
+        // 🌟 分析圖表：包含資產/負債切換邏輯
+        // ==========================================
+        let currentAnalysisType = 'group'; 
+        let currentAnalysisRecordType = 'asset'; 
+
+        function toggleAnalysisModal(show) { document.getElementById('analysis-modal').classList.toggle('hidden', !show); }
+
+        function openAnalysisModal(analysisType) {
+            currentAnalysisType = analysisType; currentAnalysisRecordType = 'asset'; 
+            toggleAnalysisModal(true); renderAnalysisChart();
+        }
+
+        function switchAnalysisMode(recordType) {
+            currentAnalysisRecordType = recordType; renderAnalysisChart();
+        }
+
+        function renderAnalysisChart() {
+            const base = appConfig.baseCurrency || 'TWD';
+            const titleEl = document.getElementById('analysis-modal-title');
+            
+            const btnAsset = document.getElementById('btn-analysis-asset');
+            const btnLiab = document.getElementById('btn-analysis-liability');
+            
+            if (currentAnalysisRecordType === 'asset') {
+                btnAsset.className = "flex-1 py-2 rounded-xl text-xs font-bold transition border cursor-pointer bg-emerald-500/20 text-emerald-400 border-emerald-500/50";
+                btnLiab.className = "flex-1 py-2 rounded-xl text-xs font-bold transition border cursor-pointer bg-slate-800 text-slate-400 border-slate-700 hover:bg-slate-700";
+                titleEl.innerText = currentAnalysisType === 'group' ? getTranslation('chart_group_title') : getTranslation('chart_cur_title');
+            } else {
+                btnLiab.className = "flex-1 py-2 rounded-xl text-xs font-bold transition border cursor-pointer bg-rose-500/20 text-rose-400 border-rose-500/50";
+                btnAsset.className = "flex-1 py-2 rounded-xl text-xs font-bold transition border cursor-pointer bg-slate-800 text-slate-400 border-slate-700 hover:bg-slate-700";
+                titleEl.innerText = currentAnalysisType === 'group' ? '📊 負債分組比例' : '🪙 負債幣種分佈';
+            }
+
+            let totalValue = 0; const dataMap = {}; 
+            
+            const targetAssets = assets.filter(a => (a.recordType || 'asset') === currentAnalysisRecordType); 
+            
+            targetAssets.forEach(asset => { 
+                const valueInBase = getAssetValueInBase(asset.symbol, asset.amount); 
+                totalValue += valueInBase; 
+                let key, label; 
+                if (currentAnalysisType === 'group') { key = getTranslation(asset.category) || getTranslation('unclassified'); label = key; } 
+                else { key = asset.symbol; label = `${currencyInfo[key]?.icon || '🪙'} ${key}`; } 
+                
+                if (!dataMap[key]) dataMap[key] = { label: label, value: 0 }; 
+                dataMap[key].value += valueInBase; 
+            }); 
+            
+            const chartData = Object.keys(dataMap).map(k => ({ key: k, label: dataMap[k].label, value: dataMap[k].value })).sort((a, b) => b.value - a.value); 
+            
+            const assetColors = ['#10b981', '#84cc16', '#06b6d4', '#3b82f6', '#f59e0b', '#ec4899', '#8b5cf6', '#14b8a6', '#f43f5e', '#a855f7']; 
+            const liabilityColors = ['#f43f5e', '#fb923c', '#ec4899', '#d946ef', '#8b5cf6', '#ef4444', '#f59e0b', '#e11d48', '#c026d3', '#db2777'];
+            const activeColors = currentAnalysisRecordType === 'asset' ? assetColors : liabilityColors;
+
+            chartData.forEach((item, idx) => item.color = activeColors[idx % activeColors.length]); 
+            
+            document.getElementById('analysis-center-title').innerText = base; 
+            document.getElementById('analysis-center-value').innerText = formatDisplayAmount(totalValue, base); 
+            
+            const svgContainer = document.getElementById('analysis-svg'); 
+            const radius = 38; const circumference = 2 * Math.PI * radius; 
+            let accumulatedStrokeOffset = 0; let svgContentHtml = ''; 
+            
+            if (totalValue === 0 || chartData.length === 0) { 
+                svgContentHtml = `<circle cx="50" cy="50" r="${radius}" fill="transparent" stroke="#334155" stroke-width="8"/>`; 
+            } else { 
+                chartData.forEach(item => { 
+                    const slicePercentage = item.value / totalValue; 
+                    const strokeLength = slicePercentage * circumference; 
+                    const displayStroke = strokeLength === circumference ? circumference - 0.01 : strokeLength; 
+                    svgContentHtml += `<circle cx="50" cy="50" r="${radius}" fill="transparent" stroke="${item.color}" stroke-width="8" stroke-dasharray="${displayStroke} ${circumference}" stroke-dashoffset="${-accumulatedStrokeOffset}" transform="rotate(-90 50 50)" class="transition-all duration-300 hover:stroke-[10px] cursor-pointer"/>`; 
+                    accumulatedStrokeOffset += strokeLength; 
+                }); 
+            } 
+            svgContainer.innerHTML = svgContentHtml; 
+            
+            const listContainer = document.getElementById('analysis-list'); listContainer.innerHTML = ''; 
+            if (chartData.length === 0) { listContainer.innerHTML = `<div class="text-center text-xs text-slate-500 py-8">尚無資料可供分析</div>`; return; } 
+            
+            const textColorClass = currentAnalysisRecordType === 'asset' ? 'text-emerald-400' : 'text-rose-400';
+
+            chartData.forEach(item => { 
+                const percentageStr = totalValue > 0 ? ((item.value / totalValue) * 100).toFixed(1) : '0.0'; 
+                const formattedValueText = formatDisplayAmount(item.value, base); 
+                const itemDiv = document.createElement('div'); 
+                itemDiv.className = "flex justify-between items-center bg-slate-800/40 border border-slate-800/60 rounded-xl p-3 hover:bg-slate-800/80 transition duration-150 mb-1.5"; 
+                itemDiv.innerHTML = `<div class="flex items-center gap-2.5"><span class="w-3 h-3 rounded-full shrink-0 shadow-sm" style="background-color: ${item.color}"></span><span class="text-xs font-bold text-slate-200">${item.label}</span><span class="text-[10px] text-slate-400 font-mono bg-slate-950 px-1.5 py-0.5 rounded-md font-semibold">${percentageStr}%</span></div><div class="text-right font-mono text-xs font-black ${textColorClass}">${base} ${formattedValueText}</div>`; 
+                listContainer.appendChild(itemDiv); 
+            }); 
+        }
+
+        // ==========================================
+        // 雜項功能：類別與設定庫
+        // ==========================================
+        function renderDashboardRates() { const container = document.getElementById('dashboard-rates'); if(!container) return; container.innerHTML = ''; const base = appConfig.baseCurrency || 'TWD'; displayRates.forEach(sym => { if(sym === base) return; const costInBase = getAssetValueInBase(sym, 1); if(costInBase > 0) { const info = currencyInfo[sym] || { icon: '🪙' }; const curName = getCurrencyName(sym); let displayVal = costInBase.toFixed(2); if(costInBase < 0.1) displayVal = costInBase.toFixed(4); const div = document.createElement('div'); div.className = "flex justify-between items-center group py-0.5 hover:bg-slate-800/40 rounded px-1 transition"; div.innerHTML = `<span class="group-hover:text-slate-300 transition flex items-center gap-1.5"><span class="text-sm">${info.icon}</span><span>${sym}/${base} <span class="text-[10px] text-slate-500">(${curName})</span>:</span></span><span class="text-emerald-400 font-bold font-mono">${displayVal}</span>`; container.appendChild(div); } }); }
+        function toggleCategoryModal(show) { document.getElementById('category-modal').classList.toggle('hidden', !show); if(show) renderCategoryManagerList(); }
+        function renderCategoryManagerList() { const container = document.getElementById('category-manager-list'); container.innerHTML = ''; customCategories.forEach((cat, idx) => { const div = document.createElement('div'); div.className = "flex justify-between items-center bg-slate-900 border border-slate-800 p-2.5 rounded-xl"; div.innerHTML = `<span class="text-xs font-bold text-slate-200">${getTranslation(cat)}</span><button onclick="deleteCustomCategory(${idx})" class="text-slate-500 hover:text-rose-400 p-1 transition cursor-pointer">✕</button>`; container.appendChild(div); }); renderCategoryOptions(); }
+        function addCustomCategory() { const input = document.getElementById('new-category-input'); const name = input.value.trim(); if(!name) return; if(customCategories.includes(name)) { alert('類別已存在'); return; } customCategories.push(name); localStorage.setItem('ignite_fi_v6_categories', JSON.stringify(customCategories)); input.value = ''; renderCategoryManagerList(); }
+        function deleteCustomCategory(index) { customCategories.splice(index, 1); localStorage.setItem('ignite_fi_v6_categories', JSON.stringify(customCategories)); renderCategoryManagerList(); }
+        function renderCategoryOptions() { const select = document.getElementById('asset-category'); if(!select) return; select.innerHTML = ''; customCategories.forEach(cat => { const opt = document.createElement('option'); opt.value = cat; opt.innerText = getTranslation(cat); select.appendChild(opt); }); }
+        function toggleQuickAddCategoryModal(show) { const modal = document.getElementById('quick-add-category-modal'); modal.classList.toggle('hidden', !show); if (show) { const input = document.getElementById('quick-category-input'); input.value = ''; setTimeout(() => input.focus(), 100); } }
+        function quickAddCategory() { toggleQuickAddCategoryModal(true); }
+        function confirmQuickAddCategory() { const input = document.getElementById('quick-category-input'); const name = input.value.trim(); if (name !== '') { if (!customCategories.includes(name)) { customCategories.push(name); localStorage.setItem('ignite_fi_v6_categories', JSON.stringify(customCategories)); renderCategoryOptions(); } document.getElementById('asset-category').value = name; toggleQuickAddCategoryModal(false); } else { input.classList.add('border-rose-500'); setTimeout(() => input.classList.remove('border-rose-500'), 500); } }
+        function toggleAssetSearchList(show) { document.getElementById('asset-symbol-list').classList.toggle('hidden', !show); }
+        function filterAssetSymbols() { const input = document.getElementById('asset-symbol-search'); const filter = input.value.toUpperCase(); const list = document.getElementById('asset-symbol-list'); list.classList.remove('hidden'); list.innerHTML = ''; Object.entries(currencyInfo).forEach(([symbol, info]) => { const curName = getCurrencyName(symbol); if (symbol.toUpperCase().includes(filter) || curName.toUpperCase().includes(filter)) { const div = document.createElement('div'); div.className = "p-3 hover:bg-slate-800 cursor-pointer text-sm text-slate-200 flex justify-between border-b border-slate-800/50 last:border-0"; div.innerHTML = `<span>${info.icon} <span class="font-mono font-bold">${symbol}</span></span><span class="text-slate-500 text-xs">${curName}</span>`; div.onclick = () => selectAssetSymbol(symbol); list.appendChild(div); } }); if (list.innerHTML === '') { list.innerHTML = `<div class="p-3 text-xs text-slate-500 text-center">${getTranslation('not_found')}</div>`; } }
+        function selectAssetSymbol(symbol) { const info = currencyInfo[symbol]; if (info) { document.getElementById('asset-symbol-search').value = `${info.icon} ${symbol} (${getCurrencyName(symbol)})`; document.getElementById('asset-symbol').value = symbol; const type = document.getElementById('record-type').value; if(info.type === 'crypto' && type === 'asset') { const found = customCategories.find(c => c === 'cat_crypto' || c.includes('加密') || c.toUpperCase().includes('CRYPTO')); if(found) document.getElementById('asset-category').value = found; } } toggleAssetSearchList(false); }
+        function toggleBaseList(show) { document.getElementById('base-currency-list').classList.toggle('hidden', !show); }
+        function filterBaseCurrencies() { const input = document.getElementById('base-currency-search'); const filter = input.value.toUpperCase(); const list = document.getElementById('base-currency-list'); list.classList.remove('hidden'); list.innerHTML = ''; let fiatHtml = `<div class="px-2 pt-2 pb-1 text-[10px] text-slate-500 font-bold uppercase tracking-wider">${getTranslation('group_fiat')}</div>`; let cryptoHtml = `<div class="px-2 pt-3 pb-1 text-[10px] text-slate-500 font-bold uppercase tracking-wider">${getTranslation('group_crypto')}</div>`; let hasFiat = false, hasCrypto = false; Object.entries(currencyInfo).forEach(([symbol, info]) => { const curName = getCurrencyName(symbol); if (symbol.toUpperCase().includes(filter) || curName.toUpperCase().includes(filter)) { const itemHtml = `<div class="p-3 hover:bg-slate-800 cursor-pointer text-sm text-slate-200 flex justify-between border-b border-slate-800/50 last:border-0" onclick="selectBaseCurrency('${symbol}')"><span>${info.icon} <span class="font-mono font-bold">${symbol}</span></span><span class="text-slate-500 text-xs">${curName}</span></div>`; if(info.type === 'crypto') { cryptoHtml += itemHtml; hasCrypto = true; } else { fiatHtml += itemHtml; hasFiat = true; } } }); if(!hasFiat && !hasCrypto) list.innerHTML = `<div class="p-3 text-xs text-slate-500 text-center">${getTranslation('not_found')}</div>`; else list.innerHTML = (hasFiat ? fiatHtml : '') + (hasCrypto ? cryptoHtml : ''); }
+        function selectBaseCurrency(symbol) { const info = currencyInfo[symbol]; document.getElementById('base-currency-search').value = `${info.icon} ${symbol} (${getCurrencyName(symbol)})`; document.getElementById('selected-base-currency').value = symbol; toggleBaseList(false); }
+        document.addEventListener('click', function(e) { if (!e.target.closest('#asset-symbol-search') && !e.target.closest('#asset-symbol-list')) toggleAssetSearchList(false); if (!e.target.closest('#base-currency-search') && !e.target.closest('#base-currency-list')) toggleBaseList(false); });
+        function toggleGlobalSettings(show) { document.getElementById('global-settings-modal').classList.toggle('hidden', !show); if(show) { const base = appConfig.baseCurrency || 'TWD'; selectBaseCurrency(base); filterBaseCurrencies(); } }
+        function saveGlobalSettings() { appConfig.language = document.getElementById('app-language').value; appConfig.baseCurrency = document.getElementById('selected-base-currency').value; localStorage.setItem('ignite_fi_v6_config', JSON.stringify(appConfig)); location.reload(); }
+        function toggleSettingsModal(show) { document.getElementById('settings-modal').classList.toggle('hidden', !show); if(show) { document.getElementById('currency-search').value = ''; renderSettingsCheckboxes(); } }
+        function handleSearch() { renderSettingsCheckboxes(document.getElementById('currency-search').value.toUpperCase().trim()); }
+        function renderSettingsCheckboxes(filterText = '') { const container = document.getElementById('settings-checkboxes'); let html = ''; Object.entries(currencyInfo).forEach(([symbol, info]) => { const curName = getCurrencyName(symbol); if (filterText && !symbol.includes(filterText) && !curName.toUpperCase().includes(filterText)) return; const isChecked = displayRates.includes(symbol) ? 'checked' : ''; html += `<label class="flex items-center justify-between p-2 hover:bg-slate-700/60 rounded-xl cursor-pointer"><div class="flex items-center gap-3"><span>${info.icon}</span><span class="text-sm font-bold text-slate-200">${symbol} <span class="text-xs text-slate-400 font-normal ml-1">${curName}</span></span></div><input type="checkbox" value="${symbol}" class="rate-checkbox" ${isChecked}></label>`; }); container.innerHTML = html; }
+        function saveSettings() { displayRates = Array.from(document.querySelectorAll('.rate-checkbox:checked')).map(cb => cb.value); localStorage.setItem('ignite_fi_v6_settings', JSON.stringify(displayRates)); toggleSettingsModal(false); renderDashboardRates(); }
+
+        // ==========================================
+        // 📡 API 核心同步
+        // ==========================================
+        async function fetchMarketData() {
+            const status = document.getElementById('sync-status'); status.innerText = getTranslation('status_syncing'); status.className = "text-[10px] bg-emerald-500/10 text-emerald-400 px-2 py-1 rounded-full font-mono font-bold tracking-wider";
+            let fiatSuccess = false; let cryptoSuccess = false;
+            try { const res = await fetch('https://open.er-api.com/v6/latest/USD'); if(res.ok) { const data = await res.json(); ratesBaseUSD = { ...ratesBaseUSD, ...data.rates }; fiatSuccess = true; } } catch(e) {}
+            try {
+                const res = await fetch('https://api.binance.com/api/v3/ticker/price');
+                if(res.ok) {
+                    const data = await res.json(); const tMap = {}; data.forEach(t => tMap[t.symbol] = parseFloat(t.price));
+                    for (const sym in currencyInfo) { if(currencyInfo[sym].type === 'crypto' && tMap[sym+'USDT']) ratesBaseUSD[sym] = 1 / tMap[sym+'USDT']; }
+                    ratesBaseUSD['USDT'] = 1; ratesBaseUSD['USDC'] = 1; cryptoSuccess = true;
+                }
+            } catch(e) {}
+
+            if(fiatSuccess || cryptoSuccess) { status.innerText = getTranslation('status_live'); status.className = "text-[10px] bg-emerald-500/10 text-emerald-400 px-2 py-1 rounded-full font-mono font-bold tracking-wider"; } 
+            else { status.innerText = getTranslation('status_offline'); status.className = "text-[10px] bg-rose-500/10 text-rose-400 px-2 py-1 rounded-full font-mono font-bold tracking-wider"; }
+            renderDashboardRates(); renderAssets();
+        }
+
+        // ==========================================
+        // 🚀 啟動鏈
+        // ==========================================
+        renderCategoryOptions();
+        applyTranslations();
+        setupChartInteraction();
+        fetchMarketData();
+        setInterval(fetchMarketData, 15000); 
+    </script>
+</body>
+</html>
